@@ -1,6 +1,6 @@
 # vkanban
 
-Cross-project task dispatch and tracking CLI, backed by pi coding agent.
+基于pi coding agent构建的极简跨项目任务看板，用于跨项目协调和编排。
 
 ## 安装
 

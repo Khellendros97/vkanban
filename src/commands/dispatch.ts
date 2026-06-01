@@ -13,7 +13,7 @@ export function register(program: Command): void {
     .command("dispatch")
     .description("Dispatch a task to a project")
     .requiredOption("-p, --project <name>", "Target project name")
-    .option("-d, --debug", "Debug mode: pi runs in interactive mode (no -p flag)")
+    .option("-d, --debug", "Debug mode: pi interactive mode with prompt (no -p flag)")
     .argument("<content...>", "Task content")
     .action(async (contentArgs: string[], opts: { project: string; debug?: boolean }) => {
       const project = getProject(opts.project);

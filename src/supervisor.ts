@@ -33,9 +33,10 @@ async function main(): Promise<void> {
   let piProc;
   try {
     const isDebug = process.env.VKANBAN_DEBUG === "1";
+    const prompt = "execute your kanban task";
     const piArgs = isDebug
-      ? [...piCmdParts, "--vkanban", taskId]
-      : [...piCmdParts, "--vkanban", taskId, "-p", "execute your kanban task"];
+      ? [...piCmdParts, "--vkanban", taskId, prompt]
+      : [...piCmdParts, "--vkanban", taskId, "-p", prompt];
     piProc = Bun.spawn(piArgs, {
       cwd: projectPath,
       env: {
