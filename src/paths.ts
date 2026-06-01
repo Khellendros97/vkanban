@@ -34,6 +34,8 @@ export function resolveCliPath(): string {
     }
     return path.resolve(raw);
   }
-  // process.argv[1] 在 Bun 中已是绝对路径，但显式 resolve 保底
-  return path.resolve(process.argv[1]);
+  // process.argv[1] 在 Bun 中已是绝对路径；若为空则退回 process.execPath
+  const argv1 = process.argv[1];
+  if (argv1) return path.resolve(argv1);
+  return process.execPath;
 }

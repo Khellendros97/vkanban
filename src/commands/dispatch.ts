@@ -43,7 +43,7 @@ export function register(program: Command): void {
 
       let proc;
       try {
-        proc = Bun.spawn(["bun", "run", supervisorEntry], {
+        proc = Bun.spawn([process.execPath, "run", supervisorEntry], {
           cwd: project.path,
           env: {
             ...process.env,
