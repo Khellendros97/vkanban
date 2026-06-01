@@ -1,11 +1,7 @@
-// src/paths.ts
 import * as path from "node:path";
 import * as os from "node:os";
+import * as fs from "node:fs";
 
-/**
- * 解析 VKANBAN_HOME 目录，默认 ~/.vkanban。
- * 优先使用 VKANBAN_HOME 环境变量。
- */
 export function resolveVkanbanHome(): string {
   if (Bun.env.VKANBAN_HOME) {
     return path.resolve(Bun.env.VKANBAN_HOME);
@@ -13,30 +9,31 @@ export function resolveVkanbanHome(): string {
   return path.join(os.homedir(), ".vkanban");
 }
 
-/**
- * 解析 supervisor 子进程入口文件路径。
- * 优先：VKANBAN_SUPERVISOR_OVERRIDE 环境变量（开发/测试用）
- * 默认：与 paths.ts 同目录的 supervisor.ts
- */
 export function resolveSupervisorEntrypoint(): string {
   if (Bun.env.VKANBAN_SUPERVISOR_OVERRIDE) {
-    return path.resolve(Bun.env.VKANBAN_SUPERVISOR_OVERRIDE);
+    const raw = Bun.env.VKANBAN_SUPERVISOR_OVERRIDE;
+    if (!path.isAbsolute(raw)) {
+      throw new Error("VKANBAN_SUPERVISOR_OVERRIDE must be an absolute path");
+    }
+    return path.resolve(raw);
   }
-  // 与当前模块同目录的 supervisor.ts（Bun 原生支持 ts 加载）
-  return path.join(import.meta.dir, "supervisor.ts");
+  // 与当前模块同目录：优先 .ts（开发态），否则 .js（发布态）
+  const dir = import.meta.dir;
+  const tsPath = path.join(dir, "supervisor.ts");
+  const jsPath = path.join(dir, "supervisor.js");
+  if (fs.existsSync(tsPath)) return tsPath;
+  if (fs.existsSync(jsPath)) return jsPath;
+  throw new Error(`Supervisor entry not found at ${tsPath} or ${jsPath}`);
 }
 
-/**
- * 解析 vkanban CLI 可执行文件绝对路径。
- * 优先：VKANBAN_CLI_OVERRIDE 环境变量
- * 默认：process.argv[1]（当前主入口）
- *
- * **仅限 vkanban 父进程（cli.ts）内调用。**
- * supervisor 子进程必须透传父进程注入的 process.env.VKANBAN_CLI。
- */
 export function resolveCliPath(): string {
   if (Bun.env.VKANBAN_CLI_OVERRIDE) {
-    return path.resolve(Bun.env.VKANBAN_CLI_OVERRIDE);
+    const raw = Bun.env.VKANBAN_CLI_OVERRIDE;
+    if (!path.isAbsolute(raw)) {
+      throw new Error("VKANBAN_CLI_OVERRIDE must be an absolute path");
+    }
+    return path.resolve(raw);
   }
-  return process.argv[1];
+  // process.argv[1] 在 Bun 中已是绝对路径，但显式 resolve 保底
+  return path.resolve(process.argv[1]);
 }

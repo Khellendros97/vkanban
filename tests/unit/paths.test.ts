@@ -47,6 +47,18 @@ describe("resolveSupervisorEntrypoint", () => {
     expect(entry).toEndWith(path.join("src", "supervisor.ts"));
     expect(path.isAbsolute(entry)).toBe(true);
   });
+
+  test("falls back to .js if .ts not found (release mode)", () => {
+    delete Bun.env.VKANBAN_SUPERVISOR_OVERRIDE;
+    // 开发态存在 supervisor.ts，测试发布态路径格式
+    const entry = paths.resolveSupervisorEntrypoint();
+    expect(entry).toEndWith("supervisor.ts");
+  });
+
+  test("throws if override is not absolute", () => {
+    Bun.env.VKANBAN_SUPERVISOR_OVERRIDE = "relative/path";
+    expect(() => paths.resolveSupervisorEntrypoint()).toThrow("absolute");
+  });
 });
 
 describe("resolveCliPath", () => {
