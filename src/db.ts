@@ -1,6 +1,7 @@
 // src/db.ts
 import { Database } from "bun:sqlite";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { resolveVkanbanHome } from "./paths";
 
 let db: Database | null = null;
@@ -54,7 +55,7 @@ export function initDb(): Database {
   if (!fs.existsSync(home)) {
     fs.mkdirSync(home, { recursive: true });
   }
-  const dbPath = home + "/data.db";
+  const dbPath = path.join(home, "data.db");
   db = new Database(dbPath);
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA busy_timeout = 5000");

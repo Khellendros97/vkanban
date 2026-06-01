@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { nanoid } from "nanoid";
+import * as path from "node:path";
 import { getProject } from "../registry";
 import { insertTask, casPendingToRunning, casRunningToFailed, getTaskById } from "../tasks";
 import { resolveSupervisorEntrypoint, resolveCliPath, resolveVkanbanHome } from "../paths";
@@ -27,25 +28,22 @@ export function register(program: Command): void {
 
       const id = nanoid(12);
 
-      // 1. INSERT pending
       insertTask({ id, project_name: project.name, project_path: project.path, content });
 
-      // 2. CAS pending→running
       const casResult = casPendingToRunning(id);
       if (!casResult.changed) {
         console.error(JSON.stringify({ status: "error", message: "Failed to transition task to running" }));
         process.exit(2);
       }
 
-      // 3. 解析路径
       const supervisorEntry = resolveSupervisorEntrypoint();
       const cliPath = resolveCliPath();
       const homePath = resolveVkanbanHome();
-      const dbPath = homePath + "/data.db";
+      const dbPath = path.join(homePath, "data.db");
 
-      // 4. spawn supervisor as Bun subprocess
+      let proc;
       try {
-        const proc = Bun.spawn(["bun", "run", supervisorEntry], {
+        proc = Bun.spawn(["bun", "run", supervisorEntry], {
           cwd: project.path,
           env: {
             ...process.env,
@@ -55,16 +53,19 @@ export function register(program: Command): void {
             VKANBAN_DB: dbPath,
             VKANBAN_PROJECT_PATH: project.path,
           },
+          detached: process.platform !== "win32",
+          windowsHide: true,
           stdio: ["ignore", "ignore", "ignore"],
         });
         proc.unref();
       } catch (e) {
         casRunningToFailed(id, "spawn_failed", String(e));
-        console.error(JSON.stringify({ status: "error", message: "Failed to spawn supervisor", task_id: id }));
+        console.log(JSON.stringify({ task_id: id }));
+        console.error(JSON.stringify({ status: "error", message: "Failed to spawn supervisor" }));
         process.exit(3);
       }
 
-      // 5. 5s claim 监控（轮询 claimed_at）
+      // 5s claim 监控
       const pollInterval = 500;
       const startTime = Date.now();
       let claimed = false;
@@ -83,8 +84,9 @@ export function register(program: Command): void {
 
       if (!claimed) {
         casRunningToFailed(id, "supervisor_not_claimed", "Supervisor did not claim within timeout");
+        // 始终先输出 task_id，然后 warning
+        console.log(JSON.stringify({ task_id: id }));
         console.error(JSON.stringify({
-          task_id: id,
           status: "warning",
           message: "Supervisor did not claim within timeout; marked as failed.",
         }));
