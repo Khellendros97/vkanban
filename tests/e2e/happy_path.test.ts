@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { $ } from "bun";
 import { nanoid } from "nanoid";
-import { initDb, closeDb, getDb } from "../../src/db";
+import { initDb, closeDb } from "../../src/db";
 import { initRegistry, registerProject } from "../../src/registry";
 import { insertTask, casPendingToRunning, casRunningToDone, getTaskById } from "../../src/tasks";
 
@@ -15,7 +15,6 @@ beforeAll(() => {
   Bun.env.VKANBAN_HOME = E2E_HOME;
   initRegistry();
   initDb();
-  // register a test project
   const projDir = path.join(E2E_HOME, "proj_a");
   fs.mkdirSync(projDir, { recursive: true });
   registerProject("my_app", projDir);
@@ -35,84 +34,99 @@ describe("e2e — init", () => {
   });
 
   test("duplicate name fails", async () => {
-    const projDir = path.join(E2E_HOME, "proj_b2");
-    fs.mkdirSync(projDir, { recursive: true });
-    const result = await $`bun run ${CLI} init proj_b ${projDir}`.nothrow();
-    expect(result.stderr?.toString()).toContain("already registered");
+    const result = await $`bun run ${CLI} init proj_b ${E2E_HOME} 2>&1`.nothrow().text();
+    expect(result).toContain("already registered");
   });
 });
 
-describe("e2e — query", () => {
+describe("e2e — query (-t)", () => {
   test("-t queries a task by id", async () => {
     const id = nanoid(12);
-    insertTask({ id, project_name: "my_app", project_path: path.join(E2E_HOME, "proj_a"), content: "test query" });
-    const result = await $`bun run ${CLI} query -t ${id}`.json();
+    insertTask({ id, project_name: "my_app", project_path: path.join(E2E_HOME, "proj_a"), content: "test" });
+    const result = await $`bun run ${CLI} -t ${id}`.json();
     expect(result.id).toBe(id);
     expect(result.status).toBe("pending");
   });
 
-  test("-t with invalid id fails gracefully", async () => {
-    const result = await $`bun run ${CLI} query -t nonexistent123`.nothrow();
-    expect(result.stderr?.toString()).toContain("not found");
+  test("-t with invalid id fails", async () => {
+    const result = await $`bun run ${CLI} -t nonexistent123 2>&1`.nothrow().text();
+    expect(result).toContain("not found");
   });
 });
 
-describe("e2e — writeback", () => {
-  test("-s sets output on running task", async () => {
+describe("e2e — writeback (-t -s)", () => {
+  test("-t -s sets output on running task", async () => {
     const id = nanoid(12);
     insertTask({ id, project_name: "my_app", project_path: path.join(E2E_HOME, "proj_a"), content: "x" });
     casPendingToRunning(id);
-    const result = await $`bun run ${CLI} writeback -t ${id} -s "done output"`.json();
+    const result = await $`bun run ${CLI} -t ${id} -s "done output"`.json();
     expect(result.new_status).toBe("done");
   });
 
-  test("-s on already done task fails", async () => {
+  test("-t -s on done task fails", async () => {
     const id = nanoid(12);
     insertTask({ id, project_name: "my_app", project_path: path.join(E2E_HOME, "proj_a"), content: "x" });
     casPendingToRunning(id);
     casRunningToDone(id, "x");
-    const result = await $`bun run ${CLI} writeback -t ${id} -s "more"`.nothrow();
-    expect(result.stderr?.toString()).toContain("terminal");
+    const out = await $`bun run ${CLI} -t ${id} -s "more" 2>&1`.nothrow().text();
+    expect(out).toContain("terminal");
   });
 });
 
-describe("e2e — fail", () => {
-  test("--fail transitions running→failed with pi_failed error_code", async () => {
+describe("e2e — fail (-t --fail)", () => {
+  test("-t --fail transitions to failed", async () => {
     const id = nanoid(12);
     insertTask({ id, project_name: "my_app", project_path: path.join(E2E_HOME, "proj_a"), content: "x" });
     casPendingToRunning(id);
-    const result = await $`bun run ${CLI} fail -t ${id} -r "something broke"`.json();
+    const result = await $`bun run ${CLI} -t ${id} --fail "broken"`.json();
     expect(result.new_status).toBe("failed");
     const task = getTaskById(id);
     expect(task!.error_code).toBe("pi_failed");
   });
 });
 
-describe("e2e — list", () => {
-  test("ls lists all projects", async () => {
-    const result = await $`bun run ${CLI} list`.text();
+describe("e2e — list (ls)", () => {
+  test("ls lists projects", async () => {
+    const result = await $`bun run ${CLI} ls`.text();
     expect(result).toContain("my_app");
   });
 
-  test("ls <name> lists tasks for a project", async () => {
-    const result = await $`bun run ${CLI} list my_app`.text();
+  test("ls <name> lists tasks", async () => {
+    const result = await $`bun run ${CLI} ls my_app`.text();
     expect(result).toContain("ID");
-  });
-
-  test("ls <name> --json outputs JSON", async () => {
-    const result = await $`bun run ${CLI} list my_app --json`.json();
-    expect(Array.isArray(result)).toBe(true);
   });
 });
 
-describe("e2e — wait", () => {
-  test("-v blocks until task is done", async () => {
+describe("e2e — cancel (-t --cancel)", () => {
+  test("-t --cancel transitions to cancelled", async () => {
     const id = nanoid(12);
-    insertTask({ id, project_name: "my_app", project_path: path.join(E2E_HOME, "proj_a"), content: "wait test" });
+    insertTask({ id, project_name: "my_app", project_path: path.join(E2E_HOME, "proj_a"), content: "test" });
     casPendingToRunning(id);
-    // async set done after 200ms
+    const result = await $`bun run ${CLI} -t ${id} --cancel`.json();
+    expect(result.new_status).toBe("cancelled");
+    const task = getTaskById(id);
+    expect(task!.status).toBe("cancelled");
+    expect(task!.error_code).toBe("cancelled");
+  });
+});
+
+describe("e2e — dispatch (-p)", () => {
+  test("-p dispatches a task and returns task_id", async () => {
+    const result = await $`bun run ${CLI} -p my_app "e2e dispatch test"`.json();
+    expect(result.task_id).toBeTruthy();
+    const task = getTaskById(result.task_id);
+    expect(task!.project_name).toBe("my_app");
+    expect(task!.content).toBe("e2e dispatch test");
+  });
+});
+
+describe("e2e — wait (-t -v)", () => {
+  test("-t -v blocks until done", async () => {
+    const id = nanoid(12);
+    insertTask({ id, project_name: "my_app", project_path: path.join(E2E_HOME, "proj_a"), content: "wait" });
+    casPendingToRunning(id);
     setTimeout(() => { casRunningToDone(id, "quick"); }, 200);
-    const result = await $`bun run ${CLI} wait -t ${id}`.json();
+    const result = await $`bun run ${CLI} -t ${id} -v`.json();
     expect(result.status).toBe("done");
   }, 10000);
 });

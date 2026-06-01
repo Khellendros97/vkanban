@@ -24,22 +24,22 @@ afterAll(() => {
 });
 
 describe("e2e — cancel", () => {
-  test("--cancel transitions running→cancelled", async () => {
+  test("-t --cancel transitions to cancelled", async () => {
     const id = nanoid(12);
     insertTask({ id, project_name: "my_app", project_path: E2E_HOME, content: "test" });
     casPendingToRunning(id);
-    const result = await $`bun run ${CLI} cancel -t ${id}`.json();
+    const result = await $`bun run ${CLI} -t ${id} --cancel`.json();
     expect(result.new_status).toBe("cancelled");
-    expect(getTaskById(id)!.error_code).toBe("cancelled");
+    expect(getTaskById(id)!.status).toBe("cancelled");
   });
 
-  test("--cancel on done task fails with exit 2", async () => {
+  test("-t --cancel on done task fails", async () => {
     const id = nanoid(12);
     insertTask({ id, project_name: "my_app", project_path: E2E_HOME, content: "test" });
     casPendingToRunning(id);
     const { casRunningToDone } = await import("../../src/tasks");
     casRunningToDone(id, "x");
-    const result = await $`bun run ${CLI} cancel -t ${id}`.nothrow();
-    expect(result.stderr?.toString()).toContain("not running");
+    const out = await $`bun run ${CLI} -t ${id} --cancel 2>&1`.nothrow().text();
+    expect(out).toContain("not running");
   });
 });

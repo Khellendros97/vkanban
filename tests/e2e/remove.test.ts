@@ -30,8 +30,8 @@ describe("e2e — remove", () => {
     const id = nanoid(12);
     insertTask({ id, project_name: "rm_test", project_path: proj, content: "x" });
     casPendingToRunning(id);
-    const result = await $`bun run ${CLI} remove rm_test --purge`.nothrow();
-    expect(result.stderr?.toString()).toContain("running");
+    const result = await $`bun run ${CLI} remove rm_test --purge 2>&1`.nothrow().text();
+    expect(result).toContain("running");
   });
 
   test("remove --purge --cancel-running succeeds", async () => {
