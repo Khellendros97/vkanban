@@ -21,7 +21,21 @@ function rewriteArgv(): void {
   while (i < args.length) {
     const arg = args[i];
 
-    if (arg === "-p" || arg === "--project") {
+    if (arg === "-d" || arg === "--debug") {
+      // -d 必须在 -p 之前；peek ahead 验证
+      if (i + 1 < args.length && (args[i + 1] === "-p" || args[i + 1] === "--project")) {
+        rewritten.push("dispatch", "-d", "-p", args[i + 2] || "");
+        i += 3;
+        while (i < args.length) {
+          rewritten.push(args[i]);
+          i++;
+        }
+        break;
+      } else {
+        rewritten.push(arg);
+        i++;
+      }
+    } else if (arg === "-p" || arg === "--project") {
       // -p <name> <content...> → dispatch -p <name> <content...>
       rewritten.push("dispatch", "-p", args[i + 1] || "");
       i += 2;

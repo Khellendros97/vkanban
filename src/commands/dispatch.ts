@@ -13,8 +13,9 @@ export function register(program: Command): void {
     .command("dispatch")
     .description("Dispatch a task to a project")
     .requiredOption("-p, --project <name>", "Target project name")
+    .option("-d, --debug", "Debug mode: pi runs in interactive mode (no -p flag)")
     .argument("<content...>", "Task content")
-    .action(async (contentArgs: string[], opts: { project: string }) => {
+    .action(async (contentArgs: string[], opts: { project: string; debug?: boolean }) => {
       const project = getProject(opts.project);
       if (!project) {
         console.error(JSON.stringify({ status: "error", message: `Project "${opts.project}" not registered.` }));
@@ -56,6 +57,7 @@ export function register(program: Command): void {
             VKANBAN_DB: dbPath,
             VKANBAN_PROJECT_PATH: project.path,
             VKANBAN_PI_CMD: resolvedPiCmd,
+            VKANBAN_DEBUG: opts.debug ? "1" : "0",
           },
           detached: true,
           windowsHide: true,

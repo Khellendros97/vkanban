@@ -29,9 +29,14 @@ async function main(): Promise<void> {
   }
 
   // 2. spawn pi（只传 task_id，content 让 pi 走 $VKANBAN_CLI -t 查 DB）
+  //    非 debug 模式加 -p 避免 pi 进入交互模式等待用户输入
   let piProc;
   try {
-    piProc = Bun.spawn([...piCmdParts, "--vkanban", taskId], {
+    const isDebug = process.env.VKANBAN_DEBUG === "1";
+    const piArgs = isDebug
+      ? [...piCmdParts, "--vkanban", taskId]
+      : [...piCmdParts, "--vkanban", taskId, "-p", "execute your kanban task"];
+    piProc = Bun.spawn(piArgs, {
       cwd: projectPath,
       env: {
         ...process.env,
