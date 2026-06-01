@@ -53,7 +53,7 @@ export function register(program: Command): void {
             VKANBAN_DB: dbPath,
             VKANBAN_PROJECT_PATH: project.path,
           },
-          detached: process.platform !== "win32",
+          detached: true,
           windowsHide: true,
           stdio: ["ignore", "ignore", "ignore"],
         });

@@ -21,16 +21,24 @@ beforeAll(() => {
   fs.writeFileSync(fakePiPath, `
     const id = process.env.VKANBAN_TASK_ID;
     const cli = process.env.VKANBAN_CLI;
-    const { $ } = await import("bun");
-    await $\`bun run \${cli} -t \${id} -s "fake pi done"\`;
+    if (!id || !cli) {
+      console.error("MISSING_ENV", JSON.stringify({ id, cli }));
+      process.exit(1);
+    }
+    // 使用 Bun.spawn + process.execPath 避免深层嵌套子进程中 \$ 的潜在问题
+    const proc = Bun.spawn([process.execPath, "run", cli, "-t", id, "-s", "fake pi done"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const exitCode = await proc.exited;
+    if (exitCode !== 0) {
+      const stderr = await new Response(proc.stderr).text();
+      console.error("WRITEBACK_FAILED", stderr);
+      process.exit(1);
+    }
   `);
 
-  // Windows 上 Bun.spawn 无法直接将 "bun run <file>.ts" 识别为可执行文件，
-  // 创建 .bat 包装器（对非 Windows 平台也安全，cmd /c 兼容）
-  const fakePiBat = path.join(E2E_HOME, "fake_pi.bat");
-  fs.writeFileSync(fakePiBat, `@echo off\r\nbun run "${fakePiPath}" %*\r\n`);
-
-  Bun.env.VKANBAN_PI_CMD = fakePiBat;
+  // 使用空格分隔的多词命令（supervisor 会 split 并展开为数组）
+  Bun.env.VKANBAN_PI_CMD = `bun run ${fakePiPath}`;
 });
 
 afterAll(() => {

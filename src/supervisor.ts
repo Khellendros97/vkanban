@@ -5,7 +5,8 @@ import { Database } from "bun:sqlite";
 async function main(): Promise<void> {
   const taskId = process.env.VKANBAN_TASK_ID;
   const dbPath = process.env.VKANBAN_DB;
-  const piCmd = process.env.VKANBAN_PI_CMD || "pi";
+  const piCmdRaw = process.env.VKANBAN_PI_CMD || "pi";
+  const piCmdParts = piCmdRaw.split(/\s+/).filter(Boolean);
   const projectPath = process.env.VKANBAN_PROJECT_PATH;
 
   if (!taskId || !dbPath || !projectPath) {
@@ -30,7 +31,7 @@ async function main(): Promise<void> {
   // 2. spawn pi（只传 task_id，content 让 pi 走 $VKANBAN_CLI -t 查 DB）
   let piProc;
   try {
-    piProc = Bun.spawn([piCmd, "--vkanban", taskId], {
+    piProc = Bun.spawn([...piCmdParts, "--vkanban", taskId], {
       cwd: projectPath,
       env: {
         ...process.env,
@@ -41,7 +42,7 @@ async function main(): Promise<void> {
         VKANBAN_DB: dbPath,
         VKANBAN_PROJECT_PATH: projectPath,
       },
-      detached: process.platform !== "win32",
+      detached: true,
       stdout: "ignore",
       stderr: "ignore",
     });
