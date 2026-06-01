@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { getProject } from "../registry";
 import { insertTask, casPendingToRunning, casRunningToFailed, getTaskById } from "../tasks";
 import { resolveSupervisorEntrypoint, resolveCliPath, resolveVkanbanHome } from "../paths";
+import { which } from "bun";
 
 const CLAIM_TIMEOUT_MS = Number(process.env.VKANBAN_CLAIM_TIMEOUT_MS || 5000);
 
@@ -40,6 +41,8 @@ export function register(program: Command): void {
       const cliPath = resolveCliPath();
       const homePath = resolveVkanbanHome();
       const dbPath = path.join(homePath, "data.db");
+      const rawPiCmd = process.env.VKANBAN_PI_CMD || "pi";
+      const resolvedPiCmd = which(rawPiCmd) || rawPiCmd;
 
       let proc;
       try {
@@ -52,6 +55,7 @@ export function register(program: Command): void {
             VKANBAN_HOME: homePath,
             VKANBAN_DB: dbPath,
             VKANBAN_PROJECT_PATH: project.path,
+            VKANBAN_PI_CMD: resolvedPiCmd,
           },
           detached: true,
           windowsHide: true,
