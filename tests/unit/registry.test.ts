@@ -55,5 +55,8 @@ describe("registry", () => {
   test("invalid project name throws", () => {
     expect(() => registerProject("", TEST_HOME)).toThrow();
     expect(() => registerProject("a b", TEST_HOME)).toThrow();
+    expect(() => registerProject("..", TEST_HOME)).toThrow();
+    expect(() => registerProject("proj/ect", TEST_HOME)).toThrow();
+    expect(() => registerProject("../escape", TEST_HOME)).toThrow();
   });
 });

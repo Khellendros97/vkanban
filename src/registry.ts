@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { resolveVkanbanHome } from "./paths";
 
-const NAME_REGEX = /^[A-Za-z0-9_.-]{1,64}$/;
+const NAME_REGEX = /^(?!.*\.\.)(?!.*\/)[A-Za-z0-9_.-]{1,64}$/;
 
 export interface RegistryEntry {
   name: string;
