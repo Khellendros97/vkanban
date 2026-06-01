@@ -41,10 +41,19 @@ beforeAll(() => {
   Bun.env.VKANBAN_PI_CMD = `bun run ${fakePiPath}`;
 });
 
-afterAll(() => {
+afterAll(async () => {
   closeDb();
   delete Bun.env.VKANBAN_PI_CMD;
-  fs.rmSync(E2E_HOME, { recursive: true, force: true });
+  // 给子进程时间释放句柄，然后重试删除
+  await new Promise(r => setTimeout(r, 1000));
+  for (let i = 0; i < 5; i++) {
+    try {
+      fs.rmSync(E2E_HOME, { recursive: true, force: true });
+      break;
+    } catch {
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
 });
 
 describe("e2e — full dispatch flow with fake pi", () => {
