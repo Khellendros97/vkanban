@@ -50,13 +50,25 @@ function rewriteArgv(): void {
       i += 2;
       // 检查后续是否跟 -s / --fail / --cancel / -v
       if (i < args.length && (args[i] === "-s" || args[i] === "--set-output")) {
-        const output = args[i + 1] || "";
-        rewritten.push("writeback", "-t", taskId, "-s", output);
-        i += 2;
+        const next = args[i + 1];
+        if (next && next !== "-" && !next.startsWith("-")) {
+          // 内联输出：-s "value"
+          rewritten.push("writeback", "-t", taskId, "-s", next);
+          i += 2;
+        } else {
+          // stdin 模式：-s - 或 -s 无参数
+          rewritten.push("writeback", "-t", taskId);
+          i += (next === "-") ? 2 : 1;
+        }
       } else if (i < args.length && args[i] === "--fail") {
-        const reason = args[i + 1] || "";
-        rewritten.push("fail", "-t", taskId, "-r", reason);
-        i += 2;
+        const next = args[i + 1];
+        if (next && next !== "-" && !next.startsWith("-")) {
+          rewritten.push("fail", "-t", taskId, "-r", next);
+          i += 2;
+        } else {
+          rewritten.push("fail", "-t", taskId);
+          i += (next === "-") ? 2 : 1;
+        }
       } else if (i < args.length && args[i] === "--cancel") {
         rewritten.push("cancel", "-t", taskId);
         i += 1;
