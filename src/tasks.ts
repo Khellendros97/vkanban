@@ -85,7 +85,19 @@ export function casRunningToFailed(
 }
 
 export function casRunningToCancelled(taskId: string): { changed: boolean; status: string; error_code: string | null } {
-  return casRunningToFailed(taskId, "cancelled", "");
+  const now = new Date().toISOString();
+  const db = getDb();
+  const result = db.query(
+    `UPDATE tasks SET status='cancelled', error_code='cancelled', finished_at=?, updated_at=?
+     WHERE id=? AND status='running'`
+  ).run(now, now, taskId);
+  const row = db.query(`SELECT status, error_code FROM tasks WHERE id=?`).get(taskId) as
+    { status: string; error_code: string | null } | undefined;
+  return {
+    changed: result.changes === 1,
+    status: row?.status ?? "unknown",
+    error_code: row?.error_code ?? null,
+  };
 }
 
 export function getTaskById(taskId: string): TaskRow | null {

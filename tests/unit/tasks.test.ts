@@ -122,6 +122,7 @@ describe("tasks — CAS transitions", () => {
     casPendingToRunning(id4);
     const result = casRunningToCancelled(id4);
     expect(result.changed).toBe(true);
+    expect(result.status).toBe("cancelled");
     expect(result.error_code).toBe("cancelled");
   });
 
