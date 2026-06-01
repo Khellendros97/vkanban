@@ -35,6 +35,15 @@ function rewriteArgv(): void {
         rewritten.push(arg);
         i++;
       }
+    } else if (arg === "-o") {
+      // peek ahead: if -t follows, map to query -o
+      if (i + 1 < args.length && (args[i + 1] === "-t" || args[i + 1] === "--task")) {
+        rewritten.push("query", "-t", args[i + 2] || "", "-o");
+        i += 3;
+      } else {
+        rewritten.push(arg);
+        i++;
+      }
     } else if (arg === "-p" || arg === "--project") {
       // -p <name> <content...> → dispatch -p <name> <content...>
       rewritten.push("dispatch", "-p", args[i + 1] || "");
@@ -74,6 +83,9 @@ function rewriteArgv(): void {
         i += 1;
       } else if (i < args.length && args[i] === "-v") {
         rewritten.push("wait", "-t", taskId);
+        i += 1;
+      } else if (i < args.length && args[i] === "-o") {
+        rewritten.push("query", "-t", taskId, "-o");
         i += 1;
       } else {
         // 纯查询
