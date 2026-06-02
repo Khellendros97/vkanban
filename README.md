@@ -44,7 +44,7 @@ vkanban ls my_project
 | `vkanban ls [name]` | 列出项目 / 任务 |
 | `vkanban remove <name> [--purge --cancel-running]` | 注销项目 |
 | `vkanban daemon [--once] [--poll-interval-ms <ms>]` | 运行任务执行 daemon |
-| `vkanban service install\|uninstall\|start\|stop\|status` | Windows Service 管理 daemon |
+| `vkanban service install\|uninstall\|start\|stop\|status` | Windows Task Scheduler 管理 daemon |
 
 ## 数据目录
 
@@ -64,9 +64,9 @@ vkanban ls my_project
 | `VKANBAN_CLI_OVERRIDE` | 覆盖 CLI 路径解析 |
 | `VKANBAN_PI_CMD` | pi 命令行 (默认 "pi") |
 
-## Windows Service
+## Windows 自启（Task Scheduler）
 
-以管理员 PowerShell 运行：
+使用 Windows Task Scheduler 将 daemon 注册为开机自启任务（以管理员 PowerShell 运行）：
 
 ```powershell
 vkanban service install
@@ -81,7 +81,7 @@ vkanban service stop
 vkanban service uninstall
 ```
 
-系统服务只托管 `vkanban daemon`。任务派发命令不会直接启动 `pi`，因此在 OpenCode、CI 或其他会等待进程树的环境中也会快速返回。
+任务以 SYSTEM 账户运行，脱离用户 session，因此不受 OpenCode、CI 等工具的 Job Object 影响。任务派发命令不会直接启动 `pi`，在任何环境中都会快速返回。
 
 **注意**：daemon 被终止（`Ctrl+C` / `sc.exe stop`）时，正在执行的任务会留在 `running` 状态。可用以下命令手动清理：
 
