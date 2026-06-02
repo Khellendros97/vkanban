@@ -13,8 +13,25 @@ export interface DaemonOptions {
   once?: boolean;
 }
 
+// 引号感知的命令行拆分（处理含空格路径如 "C:\Program Files\bun\bun.exe"）
 function splitCommand(raw: string): string[] {
-  return raw.split(/\s+/).filter(Boolean);
+  const args: string[] = [];
+  let current = "";
+  let inQuote: string | null = null;
+  for (const ch of raw) {
+    if (inQuote) {
+      if (ch === inQuote) { inQuote = null; continue; }
+      current += ch;
+    } else if (ch === '"' || ch === "'") {
+      inQuote = ch;
+    } else if (ch === " " || ch === "\t") {
+      if (current) { args.push(current); current = ""; }
+    } else {
+      current += ch;
+    }
+  }
+  if (current) args.push(current);
+  return args;
 }
 
 function jsonStdout(value: unknown): void {
@@ -32,7 +49,9 @@ export async function runWorkerOnce(): Promise<WorkerRunResult> {
   jsonStdout({ event: "task_claimed", task_id: task.id });
 
   const rawPiCmd = Bun.env.VKANBAN_PI_CMD || "pi";
-  const piCmdParts = splitCommand(which(rawPiCmd) || rawPiCmd);
+  const parts = splitCommand(rawPiCmd);
+  parts[0] = which(parts[0]) || parts[0];
+  const piCmdParts = parts;
   const cliPath = resolveCliPath();
   const homePath = resolveVkanbanHome();
   const dbPath = path.join(homePath, "data.db");
@@ -77,11 +96,11 @@ export async function runWorkerOnce(): Promise<WorkerRunResult> {
 
 export async function runDaemon(options: DaemonOptions): Promise<void> {
   jsonStdout({ event: "daemon_started", poll_interval_ms: options.pollIntervalMs, once: options.once === true });
+  const minPollMs = Math.max(options.pollIntervalMs, 10);
   while (true) {
     const result = await runWorkerOnce();
     if (options.once) return;
-    if (result.status === "idle") {
-      await new Promise((resolve) => setTimeout(resolve, options.pollIntervalMs));
-    }
+    // 无论 idle 还是 processed，循环末尾统一冷却，避免紧循环
+    await new Promise((resolve) => setTimeout(resolve, minPollMs));
   }
 }

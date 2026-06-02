@@ -67,4 +67,19 @@ describe("worker", () => {
     expect(stored.status).toBe("failed");
     expect(stored.error_code).toBe("spawn_failed");
   }, 15000);
+
+  test("runWorkerOnce marks pi_exited_no_callback when pi exits without writeback", async () => {
+    // fake pi: 成功 exit 但不调用 writeback
+    const fakePiPath = path.join(testHome, "fake_pi_exit.ts");
+    fs.writeFileSync(fakePiPath, "process.exit(0);\n");
+    Bun.env.VKANBAN_PI_CMD = `bun run ${fakePiPath}`;
+    const task = insertTask({ id: "worker_nocb", project_name: "worker_project", project_path: testHome, content: "run" });
+
+    const result = await runWorkerOnce();
+    const stored = getTaskById(task.id)!;
+
+    expect(result.status).toBe("processed");
+    expect(stored.status).toBe("failed");
+    expect(stored.error_code).toBe("pi_exited_no_callback");
+  }, 15000);
 });

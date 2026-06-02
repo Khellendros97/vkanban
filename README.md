@@ -83,6 +83,14 @@ vkanban service uninstall
 
 系统服务只托管 `vkanban daemon`。任务派发命令不会直接启动 `pi`，因此在 OpenCode、CI 或其他会等待进程树的环境中也会快速返回。
 
+**注意**：daemon 被终止（`Ctrl+C` / `sc.exe stop`）时，正在执行的任务会留在 `running` 状态。可用以下命令手动清理：
+
+```bash
+vkanban -t <task_id> --fail "daemon stopped"
+```
+
+后续版本将实现信号处理，在退出前自动标记当前任务为 failed。
+
 ## 许可证
 
 MIT
