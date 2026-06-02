@@ -83,7 +83,7 @@ vkanban service uninstall
 
 任务以 SYSTEM 账户运行，脱离用户 session，因此不受 OpenCode、CI 等工具的 Job Object 影响。任务派发命令不会直接启动 `pi`，在任何环境中都会快速返回。
 
-**注意**：daemon 被终止（`Ctrl+C` / `sc.exe stop`）时，正在执行的任务会留在 `running` 状态。可用以下命令手动清理：
+**注意**：daemon 被终止（`Ctrl+C` / `vkanban service stop`）时，正在执行的任务会留在 `running` 状态。可用以下命令手动清理：
 
 ```bash
 vkanban -t <task_id> --fail "daemon stopped"

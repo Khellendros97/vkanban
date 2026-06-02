@@ -29,11 +29,8 @@ export function buildServiceCommand(
     const args: string[] = ["/create", "/tn", taskName, "/tr", tr, "/ru", "SYSTEM", "/rl", "HIGHEST", "/f"];
     if (startType === "auto") {
       args.push("/sc", "onstart");
-    } else {
-      // demand: 不设置自动触发器，仅允许手动启动
-      args.push("/sc", "onstart");
-      args.push("/delay", "0001:00"); // 延迟 1 小时启动，effectively disabled auto
     }
+    // demand: 不添加 /sc 触发器，仅允许通过 /run 手动启动
     return { executable: "schtasks.exe", args };
   }
 

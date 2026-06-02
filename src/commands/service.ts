@@ -18,7 +18,6 @@ async function runServiceAction(action: ServiceAction, opts: { name?: string; st
   const bunPath = which("bun") || process.execPath;
   const command = buildServiceCommand(action, {
     serviceName,
-    displayName: opts.displayName,
     startType: opts.start,
     cliPath: resolveCliPath(),
     bunPath,
