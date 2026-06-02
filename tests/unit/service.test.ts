@@ -9,6 +9,7 @@ describe("service command builder (schtasks)", () => {
       serviceName: "vkanban-daemon",
       cliPath,
       bunPath: "C:\\bin\\bun.exe",
+      vkHome: "C:\\Users\\test\\.vkanban",
     });
 
     expect(result.executable).toBe("schtasks.exe");
@@ -20,6 +21,7 @@ describe("service command builder (schtasks)", () => {
     expect(result.args).toContain("/ru");
     expect(result.args).toContain("SYSTEM");
     expect(result.args.join(" ")).toContain("daemon");
+    expect(result.args.join(" ")).toContain("VKANBAN_HOME");
   });
 
   test("builds lifecycle commands", () => {

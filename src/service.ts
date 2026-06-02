@@ -4,6 +4,7 @@ export interface ServiceCommandOptions {
   serviceName: string;
   cliPath?: string;
   bunPath?: string;
+  vkHome?: string;
 }
 
 export interface BuiltServiceCommand {
@@ -18,10 +19,12 @@ export function buildServiceCommand(
   const taskName = options.serviceName;
 
   if (action === "install") {
-    if (!options.cliPath || !options.bunPath) {
-      throw new Error("cliPath and bunPath are required for service install");
+    if (!options.cliPath || !options.bunPath || !options.vkHome) {
+      throw new Error("cliPath, bunPath and vkHome are required for service install");
     }
-    const tr = `\"${options.bunPath}\" run \"${options.cliPath}\" daemon`;
+    const setEnv = `set "VKANBAN_HOME=${options.vkHome}"`;
+    const bunCmd = `\"${options.bunPath}\" run \"${options.cliPath}\" daemon`;
+    const tr = `cmd /c ${setEnv} && ${bunCmd}`;
     const args: string[] = ["/create", "/tn", taskName, "/tr", tr, "/sc", "onstart", "/ru", "SYSTEM", "/rl", "HIGHEST", "/f"];
     return { executable: "schtasks.exe", args };
   }
