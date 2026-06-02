@@ -4,8 +4,6 @@ export interface ServiceCommandOptions {
   serviceName: string;
   cliPath?: string;
   bunPath?: string;
-  vkHome?: string;
-  piCmd?: string;
 }
 
 export interface BuiltServiceCommand {
@@ -20,14 +18,11 @@ export function buildServiceCommand(
   const taskName = options.serviceName;
 
   if (action === "install") {
-    if (!options.cliPath || !options.bunPath || !options.vkHome) {
-      throw new Error("cliPath, bunPath and vkHome are required for service install");
+    if (!options.cliPath || !options.bunPath) {
+      throw new Error("cliPath and bunPath are required for service install");
     }
-    const setHome = `set "VKANBAN_HOME=${options.vkHome}"`;
-    const setPi = options.piCmd ? `set "VKANBAN_PI_CMD=${options.piCmd}"` : "";
-    const envVars = [setHome, setPi].filter(Boolean).join(" && ");
-    const bunCmd = `\"${options.bunPath}\" run \"${options.cliPath}\" daemon`;
-    const tr = envVars ? `cmd /c ${envVars} && ${bunCmd}` : bunCmd;
+    // 以当前用户运行，环境变量和 PATH 自动继承，无需 cmd /c 包装
+    const tr = `\"${options.bunPath}\" run \"${options.cliPath}\" daemon`;
     const args: string[] = ["/create", "/tn", taskName, "/tr", tr, "/sc", "onstart", "/rl", "HIGHEST", "/f"];
     return { executable: "schtasks.exe", args };
   }
