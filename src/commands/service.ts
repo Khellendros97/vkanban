@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { which } from "bun";
 import { resolveCliPath } from "../paths";
-import { buildServiceCommand, executeServiceCommand, type ServiceAction, type ServiceStartType } from "../service";
+import { buildServiceCommand, executeServiceCommand, type ServiceAction } from "../service";
 
 const DEFAULT_SERVICE_NAME = "vkanban-daemon";
 
@@ -12,13 +12,12 @@ function ensureWindows(): void {
   }
 }
 
-async function runServiceAction(action: ServiceAction, opts: { name?: string; start?: ServiceStartType }): Promise<void> {
+async function runServiceAction(action: ServiceAction, opts: { name?: string }): Promise<void> {
   ensureWindows();
   const serviceName = opts.name || DEFAULT_SERVICE_NAME;
   const bunPath = which("bun") || process.execPath;
   const command = buildServiceCommand(action, {
     serviceName,
-    startType: opts.start,
     cliPath: resolveCliPath(),
     bunPath,
   });
@@ -37,8 +36,7 @@ export function register(program: Command): void {
 
   service.command("install")
     .option("--name <name>", "Task name", DEFAULT_SERVICE_NAME)
-    .option("--start <type>", "Start trigger: auto (on boot) or demand (manual only)", "auto")
-    .action((opts: { name?: string; start?: ServiceStartType }) => runServiceAction("install", { name: opts.name, start: opts.start }));
+    .action((opts: { name?: string }) => runServiceAction("install", opts));
 
   service.command("uninstall")
     .option("--name <name>", "Task name", DEFAULT_SERVICE_NAME)

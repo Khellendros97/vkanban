@@ -3,11 +3,10 @@ import * as path from "node:path";
 import { buildServiceCommand } from "../../src/service";
 
 describe("service command builder (schtasks)", () => {
-  test("builds install command with auto start", () => {
+  test("builds install command", () => {
     const cliPath = path.resolve("src/cli.ts");
     const result = buildServiceCommand("install", {
       serviceName: "vkanban-daemon",
-      startType: "auto",
       cliPath,
       bunPath: "C:\\bin\\bun.exe",
     });

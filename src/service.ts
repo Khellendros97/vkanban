@@ -1,10 +1,7 @@
 export type ServiceAction = "install" | "uninstall" | "start" | "stop" | "status";
-export type ServiceStartType = "auto" | "demand";
 
 export interface ServiceCommandOptions {
   serviceName: string;
-  displayName?: string;
-  startType?: ServiceStartType;
   cliPath?: string;
   bunPath?: string;
 }
@@ -24,13 +21,8 @@ export function buildServiceCommand(
     if (!options.cliPath || !options.bunPath) {
       throw new Error("cliPath and bunPath are required for service install");
     }
-    const startType = options.startType || "auto";
     const tr = `\"${options.bunPath}\" run \"${options.cliPath}\" daemon`;
-    const args: string[] = ["/create", "/tn", taskName, "/tr", tr, "/ru", "SYSTEM", "/rl", "HIGHEST", "/f"];
-    if (startType === "auto") {
-      args.push("/sc", "onstart");
-    }
-    // demand: 不添加 /sc 触发器，仅允许通过 /run 手动启动
+    const args: string[] = ["/create", "/tn", taskName, "/tr", tr, "/sc", "onstart", "/ru", "SYSTEM", "/rl", "HIGHEST", "/f"];
     return { executable: "schtasks.exe", args };
   }
 
