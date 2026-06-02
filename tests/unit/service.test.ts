@@ -2,13 +2,11 @@ import { describe, test, expect } from "bun:test";
 import * as path from "node:path";
 import { buildServiceCommand } from "../../src/service";
 
-describe("service command builder (schtasks)", () => {
-  test("builds install command", () => {
-    const cliPath = path.resolve("src/cli.ts");
+describe("service command builder (schtasks + wscript)", () => {
+  test("builds install command pointing to wscript", () => {
     const result = buildServiceCommand("install", {
       serviceName: "vkanban-daemon",
-      cliPath,
-      bunPath: "C:\\bin\\bun.exe",
+      vbsPath: "C:\\Users\\test\\.vkanban\\daemon-launcher.vbs",
     });
 
     expect(result.executable).toBe("schtasks.exe");
@@ -17,9 +15,8 @@ describe("service command builder (schtasks)", () => {
     expect(result.args).toContain("vkanban-daemon");
     expect(result.args).toContain("/sc");
     expect(result.args).toContain("onstart");
-    expect(result.args).toContain("/rl");
-    expect(result.args).toContain("HIGHEST");
-    expect(result.args.join(" ")).toContain("daemon");
+    expect(result.args.join(" ")).toContain("wscript.exe");
+    expect(result.args.join(" ")).toContain("daemon-launcher.vbs");
   });
 
   test("builds lifecycle commands", () => {

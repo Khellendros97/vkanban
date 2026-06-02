@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { which } from "bun";
-import { resolveCliPath } from "../paths";
-import { buildServiceCommand, executeServiceCommand, type ServiceAction } from "../service";
+import { resolveCliPath, resolveVkanbanHome } from "../paths";
+import { buildServiceCommand, executeServiceCommand, writeVbsLauncher, type ServiceAction } from "../service";
 
 const DEFAULT_SERVICE_NAME = "vkanban-daemon";
 
@@ -16,10 +16,14 @@ async function runServiceAction(action: ServiceAction, opts: { name?: string }):
   ensureWindows();
   const serviceName = opts.name || DEFAULT_SERVICE_NAME;
   const bunPath = which("bun") || process.execPath;
+  const cliPath = resolveCliPath();
+  const vkHome = resolveVkanbanHome();
+  const vbsPath = action === "install" ? writeVbsLauncher(vkHome, bunPath, cliPath) : undefined;
   const command = buildServiceCommand(action, {
     serviceName,
-    cliPath: resolveCliPath(),
+    cliPath,
     bunPath,
+    vbsPath,
   });
   const result = await executeServiceCommand(command);
   const payload = { status: result.exitCode === 0 ? "ok" : "error", action, service_name: serviceName, stdout: result.stdout, stderr: result.stderr };
