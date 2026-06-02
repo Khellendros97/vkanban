@@ -120,12 +120,15 @@ describe("e2e — cancel (-t --cancel)", () => {
 });
 
 describe("e2e — dispatch (-p)", () => {
-  test("-p dispatches a task and returns task_id", async () => {
+  test("-p enqueues a pending task and returns task_id", async () => {
     const result = await $`bun run ${CLI} -p my_app "e2e dispatch test"`.json();
     expect(result.task_id).toBeTruthy();
     const task = getTaskById(result.task_id);
     expect(task!.project_name).toBe("my_app");
     expect(task!.content).toBe("e2e dispatch test");
+    expect(task!.status).toBe("pending");
+    expect(task!.claimed_at).toBeNull();
+    expect(task!.started_at).toBeNull();
   });
 });
 

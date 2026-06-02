@@ -7,7 +7,9 @@ import { initDb, closeDb } from "../../src/db";
 import {
   insertTask,
   casPendingToRunning,
+  casPendingToCancelled,
   casClaimTask,
+  claimNextPendingTask,
   casRunningToDone,
   casRunningToFailed,
   casRunningToCancelled,
@@ -134,5 +136,55 @@ describe("tasks — CAS transitions", () => {
     expect(result.changed).toBe(true);
     expect(result.status).toBe("failed");
     expect(result.error_code).toBe("spawn_failed");
+  });
+
+  // 辅助：清空所有 pending 任务（隔离测试间状态）
+  function drainPending(): void {
+    while (claimNextPendingTask()) { /* drain */ }
+  }
+
+  test("claimNextPendingTask claims a pending task and sets running fields", async () => {
+    drainPending();
+    const first = nanoid(12);
+    const second = nanoid(12);
+    insertTask({ id: first, project_name: projectName, project_path: TEST_HOME, content: "first" });
+    insertTask({ id: second, project_name: projectName, project_path: TEST_HOME, content: "second" });
+
+    const claimed = claimNextPendingTask();
+
+    expect(claimed).not.toBeNull();
+    expect(claimed!.status).toBe("running");
+    expect(claimed!.claimed_at).toBeTruthy();
+    expect(claimed!.started_at).toBeTruthy();
+    // 另一个任务保持 pending
+    const otherId = claimed!.id === first ? second : first;
+    expect(getTaskById(otherId)!.status).toBe("pending");
+  });
+
+  test("claimNextPendingTask returns null when no pending tasks exist", () => {
+    drainPending();
+    expect(claimNextPendingTask()).toBeNull();
+  });
+
+  test("casPendingToCancelled transitions pending→cancelled", () => {
+    const id = nanoid(12);
+    insertTask({ id, project_name: projectName, project_path: TEST_HOME, content: "cancel pending" });
+
+    const result = casPendingToCancelled(id);
+
+    expect(result.changed).toBe(true);
+    expect(result.status).toBe("cancelled");
+    expect(result.error_code).toBe("cancelled");
+  });
+
+  test("casPendingToCancelled rejects running task", () => {
+    const id = nanoid(12);
+    insertTask({ id, project_name: projectName, project_path: TEST_HOME, content: "already running" });
+    casPendingToRunning(id);
+
+    const result = casPendingToCancelled(id);
+
+    expect(result.changed).toBe(false);
+    expect(result.status).toBe("running");
   });
 });

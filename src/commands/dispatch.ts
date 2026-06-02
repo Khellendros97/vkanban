@@ -1,12 +1,7 @@
 import type { Command } from "commander";
 import { nanoid } from "nanoid";
-import * as path from "node:path";
 import { getProject } from "../registry";
-import { insertTask, casPendingToRunning, casRunningToFailed, getTaskById } from "../tasks";
-import { resolveSupervisorEntrypoint, resolveCliPath, resolveVkanbanHome } from "../paths";
-import { which } from "bun";
-
-const CLAIM_TIMEOUT_MS = Number(process.env.VKANBAN_CLAIM_TIMEOUT_MS || 5000);
+import { insertTask } from "../tasks";
 
 export function register(program: Command): void {
   program
@@ -15,7 +10,7 @@ export function register(program: Command): void {
     .requiredOption("-p, --project <name>", "Target project name")
     .option("-d, --debug", "Debug mode: pi interactive mode with prompt (no -p flag)")
     .argument("<content...>", "Task content")
-    .action(async (contentArgs: string[], opts: { project: string; debug?: boolean }) => {
+    .action((contentArgs: string[], opts: { project: string; debug?: boolean }) => {
       const project = getProject(opts.project);
       if (!project) {
         console.error(JSON.stringify({ status: "error", message: `Project "${opts.project}" not registered.` }));
@@ -29,76 +24,7 @@ export function register(program: Command): void {
       }
 
       const id = nanoid(12);
-
       insertTask({ id, project_name: project.name, project_path: project.path, content });
-
-      const casResult = casPendingToRunning(id);
-      if (!casResult.changed) {
-        console.error(JSON.stringify({ status: "error", message: "Failed to transition task to running" }));
-        process.exit(2);
-      }
-
-      const supervisorEntry = resolveSupervisorEntrypoint();
-      const cliPath = resolveCliPath();
-      const homePath = resolveVkanbanHome();
-      const dbPath = path.join(homePath, "data.db");
-      const rawPiCmd = process.env.VKANBAN_PI_CMD || "pi";
-      const resolvedPiCmd = which(rawPiCmd) || rawPiCmd;
-
-      let proc;
-      try {
-        proc = Bun.spawn([process.execPath, "run", supervisorEntry], {
-          cwd: project.path,
-          env: {
-            ...process.env,
-            VKANBAN_TASK_ID: id,
-            VKANBAN_CLI: cliPath,
-            VKANBAN_HOME: homePath,
-            VKANBAN_DB: dbPath,
-            VKANBAN_PROJECT_PATH: project.path,
-            VKANBAN_PI_CMD: resolvedPiCmd,
-            VKANBAN_DEBUG: opts.debug ? "1" : "0",
-          },
-          detached: true,
-          windowsHide: true,
-          stdio: ["ignore", "ignore", "ignore"],
-        });
-        proc.unref();
-      } catch (e) {
-        casRunningToFailed(id, "spawn_failed", String(e));
-        console.log(JSON.stringify({ task_id: id }));
-        console.error(JSON.stringify({ status: "error", message: "Failed to spawn supervisor" }));
-        process.exit(3);
-      }
-
-      // 5s claim 监控
-      const pollInterval = 500;
-      const startTime = Date.now();
-      let claimed = false;
-
-      while (Date.now() - startTime < CLAIM_TIMEOUT_MS) {
-        await new Promise((r) => setTimeout(r, pollInterval));
-        const task = getTaskById(id);
-        if (task?.claimed_at) {
-          claimed = true;
-          break;
-        }
-        if (task?.status !== "running") {
-          break;
-        }
-      }
-
-      if (!claimed) {
-        casRunningToFailed(id, "supervisor_not_claimed", "Supervisor did not claim within timeout");
-        // 始终先输出 task_id，然后 warning
-        console.log(JSON.stringify({ task_id: id }));
-        console.error(JSON.stringify({
-          status: "warning",
-          message: "Supervisor did not claim within timeout; marked as failed.",
-        }));
-        process.exit(0);
-      }
-
       console.log(JSON.stringify({ task_id: id }));
     });
 }

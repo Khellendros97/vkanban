@@ -42,6 +42,17 @@ describe("e2e — cancel", () => {
     expect(getTaskById(id)!.status).toBe("cancelled");
   });
 
+  test("-t --cancel transitions pending task to cancelled", async () => {
+    const id = nanoid(12);
+    insertTask({ id, project_name: "my_app", project_path: E2E_HOME, content: "pending cancel" });
+
+    const result = await $`bun run ${CLI} -t ${id} --cancel`.json();
+
+    expect(result.new_status).toBe("cancelled");
+    expect(getTaskById(id)!.status).toBe("cancelled");
+    expect(getTaskById(id)!.error_code).toBe("cancelled");
+  });
+
   test("-t --cancel on done task fails", async () => {
     const id = nanoid(12);
     insertTask({ id, project_name: "my_app", project_path: E2E_HOME, content: "test" });
@@ -49,6 +60,6 @@ describe("e2e — cancel", () => {
     const { casRunningToDone } = await import("../../src/tasks");
     casRunningToDone(id, "x");
     const out = await $`bun run ${CLI} -t ${id} --cancel 2>&1`.nothrow().text();
-    expect(out).toContain("not running");
+    expect(out).toContain("cannot be cancelled");
   });
 });

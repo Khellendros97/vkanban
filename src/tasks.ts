@@ -55,6 +55,42 @@ export function casClaimTask(taskId: string): { claimed: boolean; claimed_at: st
   return { claimed: false, claimed_at: null };
 }
 
+// 注：当前为单 worker 串行设计，SELECT 后 CAS UPDATE 可满足。
+// 若后续引入多 worker 并发，需改写为单条原子 SQL 或加重试循环。
+export function claimNextPendingTask(): TaskRow | null {
+  const now = new Date().toISOString();
+  const db = getDb();
+  const candidate = db.query(
+    `SELECT id FROM tasks WHERE status='pending' ORDER BY created_at ASC LIMIT 1`
+  ).get() as { id: string } | undefined;
+
+  if (!candidate) return null;
+
+  const result = db.query(
+    `UPDATE tasks SET status='running', started_at=?, claimed_at=?, updated_at=?
+     WHERE id=? AND status='pending'`
+  ).run(now, now, now, candidate.id);
+
+  if (result.changes !== 1) return null;
+  return getTaskById(candidate.id);
+}
+
+export function casPendingToCancelled(taskId: string): { changed: boolean; status: string; error_code: string | null } {
+  const now = new Date().toISOString();
+  const db = getDb();
+  const result = db.query(
+    `UPDATE tasks SET status='cancelled', error_code='cancelled', finished_at=?, updated_at=?
+     WHERE id=? AND status='pending'`
+  ).run(now, now, taskId);
+  const row = db.query(`SELECT status, error_code FROM tasks WHERE id=?`).get(taskId) as
+    { status: string; error_code: string | null } | undefined;
+  return {
+    changed: result.changes === 1,
+    status: row?.status ?? "unknown",
+    error_code: row?.error_code ?? null,
+  };
+}
+
 export function casRunningToDone(taskId: string, output: string): { changed: boolean; status: string } {
   const now = new Date().toISOString();
   const db = getDb();

@@ -57,21 +57,21 @@ afterAll(async () => {
 });
 
 describe("e2e — full dispatch flow with fake pi", () => {
-  test("vkanban -p → supervisor → pi → writeback done (full chain)", async () => {
+  test("vkanban -p → daemon --once → pi → writeback done", async () => {
     // 通过真实的 vkanban -p 派发任务
     const dispatchOutput = await $`bun run ${CLI} -p full_test "full flow test"`.text();
     const dispatchResult = JSON.parse(dispatchOutput.trim().split("\n").pop()!);
     expect(dispatchResult.task_id).toBeTruthy();
     const tid = dispatchResult.task_id;
 
-    // 等待 supervisor + fake pi 完成（最多 20s）
-    let finalTask;
-    for (let attempt = 0; attempt < 40; attempt++) {
-      finalTask = getTaskById(tid);
-      if (finalTask && finalTask.status !== "running" && finalTask.status !== "pending") break;
-      await new Promise(r => setTimeout(r, 500));
-    }
+    expect(getTaskById(tid)!.status).toBe("pending");
 
+    // 用 daemon --once 执行单一任务
+    const daemonOutput = await $`bun run ${CLI} daemon --once`.text();
+    expect(daemonOutput).toContain("task_claimed");
+    expect(daemonOutput).toContain("task_finished");
+
+    const finalTask = getTaskById(tid);
     expect(finalTask).toBeTruthy();
     expect(finalTask!.status).toBe("done");
     expect(finalTask!.output).toContain("fake pi done");

@@ -11,6 +11,8 @@ import * as cmdCancel from "./commands/cancel";
 import * as cmdWait from "./commands/wait";
 import * as cmdList from "./commands/list";
 import * as cmdRemove from "./commands/remove";
+import * as cmdDaemon from "./commands/daemon";
+import * as cmdService from "./commands/service";
 
 // -- 预处理层：将 spec 规定的顶层 flags 映射为内部子命令 --
 function rewriteArgv(): void {
@@ -128,6 +130,8 @@ cmdQuery.register(program);
 cmdWriteback.register(program);
 cmdFail.register(program);
 cmdCancel.register(program);
+cmdDaemon.register(program);
+cmdService.register(program);
 cmdWait.register(program);
 cmdList.register(program);
 cmdRemove.register(program);
