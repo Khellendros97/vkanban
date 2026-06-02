@@ -96,11 +96,12 @@ export async function runWorkerOnce(): Promise<WorkerRunResult> {
 
 export async function runDaemon(options: DaemonOptions): Promise<void> {
   jsonStdout({ event: "daemon_started", poll_interval_ms: options.pollIntervalMs, once: options.once === true });
-  const minPollMs = Math.max(options.pollIntervalMs, 10);
+  const PROCESSED_COOLDOWN_MS = 10;
   while (true) {
     const result = await runWorkerOnce();
     if (options.once) return;
-    // 无论 idle 还是 processed，循环末尾统一冷却，避免紧循环
-    await new Promise((resolve) => setTimeout(resolve, minPollMs));
+    // idle 时使用配置的轮询间隔；processed 时仅极短冷却避免紧循环
+    const delay = result.status === "idle" ? options.pollIntervalMs : PROCESSED_COOLDOWN_MS;
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
 }
