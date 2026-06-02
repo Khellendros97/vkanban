@@ -28,7 +28,7 @@ export function buildServiceCommand(
     const envVars = [setHome, setPi].filter(Boolean).join(" && ");
     const bunCmd = `\"${options.bunPath}\" run \"${options.cliPath}\" daemon`;
     const tr = envVars ? `cmd /c ${envVars} && ${bunCmd}` : bunCmd;
-    const args: string[] = ["/create", "/tn", taskName, "/tr", tr, "/sc", "onstart", "/ru", "SYSTEM", "/rl", "HIGHEST", "/f"];
+    const args: string[] = ["/create", "/tn", taskName, "/tr", tr, "/sc", "onstart", "/rl", "HIGHEST", "/f"];
     return { executable: "schtasks.exe", args };
   }
 

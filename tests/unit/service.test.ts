@@ -18,8 +18,8 @@ describe("service command builder (schtasks)", () => {
     expect(result.args).toContain("vkanban-daemon");
     expect(result.args).toContain("/sc");
     expect(result.args).toContain("onstart");
-    expect(result.args).toContain("/ru");
-    expect(result.args).toContain("SYSTEM");
+    expect(result.args).toContain("/rl");
+    expect(result.args).toContain("HIGHEST");
     expect(result.args.join(" ")).toContain("daemon");
     expect(result.args.join(" ")).toContain("VKANBAN_HOME");
   });
